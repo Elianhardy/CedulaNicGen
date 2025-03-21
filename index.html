@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Validación y Generación de Cédulas Nicaragüenses</title>
+  <style>
+    /* Reset y estilos básicos */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f0f2f5;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    /* Tabs */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab-button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .tab-button.active,
+    .tab-button:hover {
+      background: #0056b3;
+    }
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.5s;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    /* Formularios */
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+    }
+    button {
+      padding: 10px;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #218838;
+    }
+    .resultado {
+      background: #e9ecef;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    /* Responsividad */
+    @media (max-width: 600px) {
+      .tab-button {
+        flex: 1 1 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Cédulas Nicaragüenses</h1>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="validar">Validar Cédula</button>
+      <button class="tab-button" data-tab="generar">Generar Cédula</button>
+    </div>
+
+    <!-- Sección de validación -->
+    <div id="validar" class="tab-content active">
+      <h2>Validar Cédula</h2>
+      <form onsubmit="event.preventDefault(); validarCedula();">
+        <input type="text" id="cedulaInput" placeholder="Ingrese la cédula (con o sin guiones)" required>
+        <button type="submit">Validar</button>
+      </form>
+      <div id="resultadoValidacion" class="resultado"></div>
+    </div>
+
+    <!-- Sección de generación -->
+    <div id="generar" class="tab-content">
+      <h2>Generar Cédula</h2>
+      <form onsubmit="event.preventDefault(); generarCedulaHandler();">
+        <label for="departamentoSelect">Departamento:</label>
+        <select id="departamentoSelect"></select>
+        
+        <label for="municipioSelect">Municipio:</label>
+        <select id="municipioSelect"></select>
+        
+        <label for="diaInput">Día de nacimiento:</label>
+        <input type="number" id="diaInput" min="1" max="31" placeholder="Día" required>
+        
+        <label for="mesInput">Mes de nacimiento:</label>
+        <input type="number" id="mesInput" min="1" max="12" placeholder="Mes" required>
+        
+        <label for="anioInput">Año de nacimiento:</label>
+        <input type="number" id="anioInput" placeholder="Año (ej. 1985)" required>
+        
+        <button type="submit">Generar Cédula</button>
+      </form>
+      <div id="resultadoGeneracion" class="resultado"></div>
+    </div>
+  </div>
+
+  <script>
+    // Constantes y diccionarios
+    const LETRAS_VALIDAS = "ABCDEFGHJKLMNPQRSTUVWXY";
+    const DEPARTAMENTOS = {
+      "00": "Managua",
+      "04": "Carazo",
+      "08": "Chinandega",
+      "12": "Chontales",
+      "16": "Estelí",
+      "20": "Granada",
+      "24": "Jinotega",
+      "28": "León",
+      "32": "Madriz",
+      "36": "Boaco",
+      "40": "Masaya",
+      "44": "Matagalpa",
+      "48": "Nueva Segovia",
+      "52": "Río San Juan",
+      "56": "Rivas",
+      "60": "RAAN (Costa Caribe Norte)",
+      "62": "RAAS (Costa Caribe Sur)"
+    };
+
+    const MUNICIPIOS = {
+      "00": {
+          "001": "Managua",
+          "002": "San Rafael del Sur",
+          "003": "Tipitapa",
+          "004": "Villa El Carmen",
+          "005": "San Francisco Libre",
+          "006": "Mateare",
+          "007": "Ticuantepe",
+          "008": "Ciudad Sandino",
+          "009": "El Crucero"
+      },
+      "04": {
+          "041": "Jinotepe",
+          "042": "Diriamba",
+          "043": "Dolores",
+          "044": "Santa Teresa",
+          "045": "La Paz de Carazo",
+          "046": "El Rosario",
+          "047": "La Conquista",
+          "048": "San Marcos"
+      },
+      "08": {
+          "081": "Chinandega",
+          "082": "Corinto",
+          "083": "El Realejo",
+          "084": "Chichigalpa",
+          "085": "Posoltega",
+          "086": "El Viejo",
+          "087": "Puerto Morazán",
+          "088": "Somotillo",
+          "089": "Villa Nueva",
+          "090": "Santo Tomás del Norte",
+          "091": "Cinco Pinos",
+          "092": "San Francisco del Norte",
+          "093": "San Pedro del Norte"
+      },
+      "12": {
+          "121": "Juigalpa",
+          "122": "Acoyapa",
+          "123": "Santo Tomás",
+          "124": "Villa Sandino",
+          "125": "San Pedro de Lóvago",
+          "126": "La Libertad",
+          "127": "Santo Domingo",
+          "128": "Comalapa",
+          "129": "San Francisco de Cuapa",
+          "130": "El Coral"
+      },
+      "16": {
+          "161": "Estelí",
+          "162": "Pueblo Nuevo",
+          "163": "Condega",
+          "164": "San Juan de Limay",
+          "165": "La Trinidad",
+          "166": "San Nicolás"
+      },
+      "20": {
+          "201": "Granada",
+          "202": "Nandaime",
+          "203": "Diriá",
+          "204": "Diriomo"
+      },
+      "24": {
+          "241": "Jinotega",
+          "242": "San Rafael del Norte",
+          "243": "San Sebastián de Yalí",
+          "244": "La Concordia",
+          "245": "San José de Bocay",
+          "246": "El Cuá",
+          "247": "Santa María de Pantasma",
+          "248": "Wiwilí de Jinotega"
+      },
+      "28": {
+          "281": "León",
+          "282": "Nagarote",
+          "283": "Quezalguaque",
+          "284": "El Jicaral",
+          "285": "El Sauce",
+          "286": "La Paz Centro",
+          "287": "Achuapa",
+          "288": "Santa Rosa del Peñón",
+          "289": "Telica",
+          "290": "Larreynaga (Malpaisillo)"
+      },
+      "32": {
+          "321": "Somoto",
+          "322": "Telpaneca",
+          "323": "San Juan del Río Coco",
+          "324": "Palacagüina",
+          "325": "Yalagüina",
+          "326": "Totogalpa",
+          "327": "Las Sabanas",
+          "328": "San Lucas",
+          "329": "San José de Cusmapa"
+      },
+      "36": {
+          "361": "Boaco",
+          "362": "Camoapa",
+          "363": "Santa Lucía",
+          "364": "San José de los Remates",
+          "365": "San Lorenzo",
+          "366": "Teustepe"
+      },
+      "40": {
+          "401": "Masaya",
+          "402": "Nindirí",
+          "403": "Tisma",
+          "404": "Catarina",
+          "405": "San Juan de Oriente",
+          "406": "Niquinohomo",
+          "407": "Nandasmo",
+          "408": "Masatepe",
+          "409": "La Concepción"
+      },
+      "44": {
+          "441": "Matagalpa",
+          "442": "San Ramón",
+          "443": "Sébaco",
+          "444": "San Dionisio",
+          "445": "Esquipulas",
+          "446": "Río Blanco",
+          "447": "San Isidro",
+          "448": "Terrabona",
+          "449": "Rancho Grande",
+          "450": "Matiguás",
+          "451": "Muy Muy",
+          "452": "Tuma - La Dalia",
+          "453": "Ciudad Darío"
+      },
+      "48": {
+          "481": "Ocotal",
+          "482": "Santa María",
+          "483": "Macuelizo",
+          "484": "Dipilto",
+          "485": "Jalapa",
+          "486": "El Jícaro",
+          "487": "Murra",
+          "488": "Quilalí",
+          "489": "Wiwilí (Nva. Segovia)",
+          "490": "Ciudad Antigua",
+          "491": "Mozonte",
+          "492": "San Fernando"
+      },
+      "52": {
+          "521": "San Carlos",
+          "522": "El Castillo",
+          "523": "San Miguelito",
+          "524": "Morrito",
+          "525": "El Almendro",
+          "526": "San Juan del Norte"
+      },
+      "56": {
+          "561": "Rivas",
+          "562": "Moyogalpa",
+          "563": "Altagracia",
+          "564": "San Jorge",
+          "565": "Tola",
+          "566": "Belén",
+          "567": "Potosí",
+          "568": "Buenos Aires",
+          "569": "Cárdenas",
+          "570": "San Juan del Sur"
+      },
+      "60": {
+          "601": "Puerto Cabezas",
+          "602": "Siuna",
+          "603": "El Ayote",
+          "604": "Bonanza",
+          "605": "Mulukukú"
+      },
+      "62": {
+          "621": "Bluefields",
+          "622": "Corn Island",
+          "623": "El Rama",
+          "624": "Kukra Hill",
+          "625": "La Desembocadura de Río Grande"
+      }
+    };
+
+    // Funciones auxiliares
+    function quitarGuiones(cedula) {
+      return cedula.replace(/-/g, "").toUpperCase();
+    }
+
+    function esCedulaValida(cedula) {
+      if (cedula.length !== 14) return false;
+      const regex = /^\d{13}[A-Z]$/;
+      if (!regex.test(cedula)) return false;
+
+      const dd = cedula.substring(3, 5);
+      const mm = cedula.substring(5, 7);
+      const yy = cedula.substring(7, 9);
+      const dia = parseInt(dd);
+      const mes = parseInt(mm);
+      const anioAbrev = parseInt(yy);
+      const anioCompleto = anioAbrev < 30 ? 2000 + anioAbrev : 1900 + anioAbrev;
+
+      const fechaNac = new Date(anioCompleto, mes - 1, dia);
+      if (fechaNac.getFullYear() !== anioCompleto ||
+          fechaNac.getMonth() !== mes - 1 ||
+          fechaNac.getDate() !== dia) {
+        return false;
+      }
+
+      const sinLetra = cedula.substring(0, 13);
+      const numeroSinLetra = parseInt(sinLetra, 10);
+      const posLetra = numeroSinLetra % 23;
+      const letraCalculada = LETRAS_VALIDAS.charAt(posLetra);
+      return letraCalculada === cedula.charAt(13);
+    }
+
+    function obtenerDepartamento(cedula) {
+      const codDpto = cedula.substring(0, 2);
+      return DEPARTAMENTOS[codDpto] || "Desconocido";
+    }
+
+    function calcularEdad(cedula) {
+      const dd = cedula.substring(3, 5);
+      const mm = cedula.substring(5, 7);
+      const yy = cedula.substring(7, 9);
+      const dia = parseInt(dd);
+      const mes = parseInt(mm);
+      const anioAbrev = parseInt(yy);
+      const anio = anioAbrev < 30 ? 2000 + anioAbrev : 1900 + anioAbrev;
+
+      const hoy = new Date();
+      const fechaNac = new Date(anio, mes - 1, dia);
+      if (isNaN(fechaNac.getTime())) return -1;
+
+      let edad = hoy.getFullYear() - fechaNac.getFullYear();
+      const cumple = new Date(hoy.getFullYear(), mes - 1, dia);
+      if (hoy < cumple) edad--;
+      return edad;
+    }
+
+    function generarCedula(municipio, dia, mes, anio) {
+      const dd = String(dia).padStart(2, '0');
+      const mm = String(mes).padStart(2, '0');
+      const yy = String(anio % 100).padStart(2, '0');
+      const sufijo = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+      const parteNumerica = municipio + dd + mm + yy + sufijo;
+      const numeroSinLetra = parseInt(parteNumerica, 10);
+      const posLetra = numeroSinLetra % 23;
+      const letra = LETRAS_VALIDAS.charAt(posLetra);
+      return parteNumerica + letra;
+    }
+
+    // Manejadores de eventos
+    function validarCedula() {
+      const cedulaInput = document.getElementById('cedulaInput').value;
+      const cedula = quitarGuiones(cedulaInput);
+      const resultadoDiv = document.getElementById('resultadoValidacion');
+
+      if (esCedulaValida(cedula)) {
+        const depto = obtenerDepartamento(cedula);
+        const edad = calcularEdad(cedula);
+        resultadoDiv.innerHTML = `<p>La cédula <strong>${cedulaInput}</strong> ES válida.</p>
+                                  <p>Departamento: <strong>${depto}</strong></p>
+                                  <p>Edad aproximada: <strong>${edad >= 0 ? edad + ' años' : 'Fecha inválida'}</strong></p>`;
+      } else {
+        resultadoDiv.innerHTML = `<p>La cédula <strong>${cedulaInput}</strong> NO es válida.</p>`;
+      }
+    }
+
+    function actualizarMunicipios() {
+      const deptoSelect = document.getElementById('departamentoSelect');
+      const muniSelect = document.getElementById('municipioSelect');
+      const deptoCodigo = deptoSelect.value;
+      muniSelect.innerHTML = "";
+      if (MUNICIPIOS[deptoCodigo]) {
+        for (const [codigo, nombre] of Object.entries(MUNICIPIOS[deptoCodigo])) {
+          const option = document.createElement('option');
+          option.value = codigo;
+          option.textContent = `${codigo} - ${nombre}`;
+          muniSelect.appendChild(option);
+        }
+      }
+    }
+
+    function generarCedulaHandler() {
+      const muniSelect = document.getElementById('municipioSelect');
+      const dia = parseInt(document.getElementById('diaInput').value, 10);
+      const mes = parseInt(document.getElementById('mesInput').value, 10);
+      const anio = parseInt(document.getElementById('anioInput').value, 10);
+      const municipio = muniSelect.value;
+      const resultadoDiv = document.getElementById('resultadoGeneracion');
+
+      if (!municipio || isNaN(dia) || isNaN(mes) || isNaN(anio)) {
+        resultadoDiv.innerHTML = `<p>Por favor, complete todos los campos correctamente.</p>`;
+        return;
+      }
+      const cedulaGenerada = generarCedula(municipio, dia, mes, anio);
+      resultadoDiv.innerHTML = `<p>Cédula generada: <strong>${cedulaGenerada}</strong></p>`;
+    }
+
+    // Inicialización de departamentos en el select
+    function inicializarDepartamentos() {
+      const deptoSelect = document.getElementById('departamentoSelect');
+      for (const [codigo, nombre] of Object.entries(DEPARTAMENTOS)) {
+        const option = document.createElement('option');
+        option.value = codigo;
+        option.textContent = `${codigo} - ${nombre}`;
+        deptoSelect.appendChild(option);
+      }
+      actualizarMunicipios();
+    }
+
+    // Funcionalidad de tabs
+    function switchTab(tabName) {
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => {
+        tab.classList.toggle('active', tab.id === tabName);
+      });
+      const tabButtons = document.querySelectorAll('.tab-button');
+      tabButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      inicializarDepartamentos();
+      // Actualiza los municipios al cambiar el departamento
+      document.getElementById('departamentoSelect').addEventListener('change', actualizarMunicipios);
+
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', function() {
+          switchTab(this.getAttribute('data-tab'));
+        });
+      });
+    });
+  </script>
+</body>
+</html>
